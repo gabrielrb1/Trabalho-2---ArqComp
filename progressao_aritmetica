@@ -1,12 +1,14 @@
 		mov		r4, #2147483648
 		mov		r5, #10
-		mov		r6, #0
-		mov		r7, #2
+		mov		r6, #0 ;contador
+		mov		r7, #8388608 ; valor base
 		mov		r12, #0 ;incrementos para memória
 		mov		r13, #0x100 ;referência para memória
 		
 pg
 		cmp		r5,r6
+		beq		fim
+		cmp		r4,r7
 		beq		fim
 		lsl		r7,r7,#1
 		add		r6, r6, #1
