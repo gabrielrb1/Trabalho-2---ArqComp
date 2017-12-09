@@ -1,0 +1,13 @@
+		mov		r4, #2147483648
+		mov		r5, #10
+		mov		r6, #0
+		mov		r7, #2
+		
+pg
+		cmp		r5,r6
+		beq		fim
+		lsl		r7,r7,#1
+		add		r6, r6, #1
+		bne		fim
+		b		pg
+fim
