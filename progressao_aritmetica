@@ -8,8 +8,8 @@
 pg
 		cmp		r5,r6
 		beq		fim
-		cmp		r4,r7
-		beq		fim
+		tst		r7, r4
+		bne		fim
 		lsl		r7,r7,#1
 		add		r6, r6, #1
 		str		r7, [r13, r12]
