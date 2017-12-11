@@ -1,9 +1,13 @@
-		mov		r4, #2147483648 ;valor de estouro da pg
-		mov		r5, #10 ;número máximo de iterações
-		mov		r6, #0 ;contador de iterações
-		mov		r7, #8388608 ;valor inicial
-		mov		r12, #0 ;incrementos para memória
-		mov		r13, #0x1000 ;referência para memória
+		and		r4, r4, #0
+		add		r4, r4, #2147483648 ;valor de estouro da pg
+		and		r5, r5, #0
+		add		r5, r5, #10 ;número máximo de iterações
+		and		r6, r6, #0 ;contador de iterações
+		and		r7, r7, #0
+		add		r7, r7, #67108864 ;valor inicial
+		and		r11, r11, #0
+		add		r11, r11, #0x1000 ;referência para memória
+		and		r12, r12, #0 ;incrementos para memória
 		
 pg
 		cmp		r5,r6 ;verifica se o número de iterações foi atingido
@@ -12,7 +16,7 @@ pg
 		bne		fim
 		lsl		r7,r7,#1 ;multiplica por dois, que é o fator de crescimento da pg
 		add		r6, r6, #1 ;incrementa o contador de iterações
-		str		r7, [r13, r12] ;armazena o item calculado na memória
+		str		r7, [r11, r12] ;armazena o item calculado na memória
 		add		r12, r12, #4 ;aponta a referência para o próximo endereço
 		b		pg
 fim
