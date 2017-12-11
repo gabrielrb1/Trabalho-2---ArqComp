@@ -186,19 +186,19 @@ module controller(input  logic         clk, reset,
   logic       PCS, RegW, MemW, NoWrite; //Cria o NoWrite no plano de controle
   
   decoder dec(Instr[27:26], Instr[25:20], Instr[15:12],
-              FlagW, PCS, RegW, MemW,
-              MemtoReg, ALUSrc, ImmSrc, RegSrc, ALUControl, NoWrite);
+              FlagW, PCS, RegW, MemW, NoWrite,
+              MemtoReg, ALUSrc, ImmSrc, RegSrc, ALUControl);
   condlogic cl(clk, reset, Instr[31:28], ALUFlags,
-               FlagW, PCS, RegW, MemW,
-               PCSrc, RegWrite, MemWrite, NoWrite);
+               FlagW, PCS, RegW, MemW, NoWrite,
+               PCSrc, RegWrite, MemWrite);
 endmodule
 
 module decoder(input  logic [1:0] Op,
                input  logic [5:0] Funct,
                input  logic [3:0] Rd,
                output logic [1:0] FlagW,
-               output logic       PCS, RegW, MemW,
-               output logic       MemtoReg, ALUSrc, NoWrite,
+               output logic       PCS, RegW, MemW, NoWrite,
+               output logic       MemtoReg, ALUSrc,
                output logic [1:0] ImmSrc, RegSrc, ALUControl);
 
   logic [9:0] controls;
@@ -274,7 +274,7 @@ module condlogic(input  logic       clk, reset,
   // write controls are conditional
   condcheck cc(Cond, Flags, CondEx);
   assign FlagWrite = FlagW & {2{CondEx}};
-  assign RegWrite  = RegW  & CondEx & ~NoWrite;
+  assign RegWrite  = (RegW  & CondEx) & ~NoWrite;
   assign MemWrite  = MemW  & CondEx;
   assign PCSrc     = PCS   & CondEx;
 endmodule    
