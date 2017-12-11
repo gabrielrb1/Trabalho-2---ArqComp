@@ -183,14 +183,14 @@ module controller(input  logic         clk, reset,
                   output logic         PCSrc);
 
   logic [1:0] FlagW;
-  logic       PCS, RegW, MemW;
+  logic       PCS, RegW, MemW, NoWrite; //Cria o NoWrite no plano de controle
   
   decoder dec(Instr[27:26], Instr[25:20], Instr[15:12],
               FlagW, PCS, RegW, MemW,
-              MemtoReg, ALUSrc, ImmSrc, RegSrc, ALUControl);
+              MemtoReg, ALUSrc, ImmSrc, RegSrc, ALUControl, NoWrite);
   condlogic cl(clk, reset, Instr[31:28], ALUFlags,
                FlagW, PCS, RegW, MemW,
-               PCSrc, RegWrite, MemWrite);
+               PCSrc, RegWrite, MemWrite, NoWrite);
 endmodule
 
 module decoder(input  logic [1:0] Op,
@@ -198,7 +198,7 @@ module decoder(input  logic [1:0] Op,
                input  logic [3:0] Rd,
                output logic [1:0] FlagW,
                output logic       PCS, RegW, MemW,
-               output logic       MemtoReg, ALUSrc,
+               output logic       MemtoReg, ALUSrc, NoWrite,
                output logic [1:0] ImmSrc, RegSrc, ALUControl);
 
   logic [9:0] controls;
@@ -231,10 +231,15 @@ module decoder(input  logic [1:0] Op,
       case(Funct[4:1]) 
   	    4'b0100: ALUControl = 2'b00; // ADD
   	    4'b0010: ALUControl = 2'b01; // SUB
-          4'b0000: ALUControl = 2'b10; // AND
+            4'b0000: ALUControl = 2'b10; // AND
   	    4'b1100: ALUControl = 2'b11; // ORR
+	    4'b1010: ALUControl = 2'b01; // CMP
+	    4'b1000: ALUControl = 2'b10; // TST
   	    default: ALUControl = 2'bx;  // unimplemented
       endcase
+if ((Funct[4:1] == 4'b1010)|(Funct[4:1] == 4'b1000)) NoWrite = 1;
+else NoWrite = 0;
+
       // update flags if S bit is set 
 	// (C & V only updated for arith instructions)
       FlagW[1]      = Funct[0]; // FlagW[1] = S-bit
@@ -269,7 +274,7 @@ module condlogic(input  logic       clk, reset,
   // write controls are conditional
   condcheck cc(Cond, Flags, CondEx);
   assign FlagWrite = FlagW & {2{CondEx}};
-  assign RegWrite  = RegW  & CondEx & !NoWrite;
+  assign RegWrite  = RegW  & CondEx & ~NoWrite;
   assign MemWrite  = MemW  & CondEx;
   assign PCSrc     = PCS   & CondEx;
 endmodule    
