@@ -328,7 +328,7 @@ module datapath(input  logic        clk, reset,
                 input  logic [31:0] ReadData);
 
   logic [31:0] PCNext, PCPlus4, PCPlus8;
-  logic [31:0] ExtImm, SrcA, SrcB, Result;
+  logic [31:0] ExtImm, SrcA, SrcB, Result, WriteData2, ALUResult2;
   logic [3:0]  RA1, RA2;
 
   // next PC logic
@@ -343,17 +343,18 @@ module datapath(input  logic        clk, reset,
   regfile     rf(clk, RegWrite, RA1, RA2,
                  Instr[15:12], Result, PCPlus8, 
                  SrcA, WriteData); 
+  mux2 #(32)  calcmux1(ALUResult, SrcB, Shift, ALUResult2); 
   mux2 #(32)  resmux(ALUResult2, ReadData, MemtoReg, Result); //Acrescenta o resultado obtido pelo novo mux no último mux
   extend      ext(Instr[23:0], ImmSrc, ExtImm);
 
   // ALU logic
-
-  mux2 #(32)  srcbmux(Shift, ExtImm, ALUSrc, SrcB); //Altera a entradad do mux para Shift
+  mux2 #(32)  calcmux2(WriteData, WriteData << Instr[11:7], Shift, WriteData2); //Altera a entradad do mux para Shift
+  mux2 #(32)  srcbmux(WriteData2, ExtImm, ALUSrc, SrcB); //Altera a entradad do mux para Shift
   alu         alu(SrcA, SrcB, ALUControl, 
                   ALUResult, ALUFlags);
-  mux2 #(32) resultmux2 (ALUResult, SrcB, Shift, ALUResult2); //Acrescenta um novo mux
 
-	if ((Funct[6:5] == 2'b00) & Shift == 1) //Verifica se o shift está ativado e se é do tipo LSL
+
+	
 		
 
 endmodule
