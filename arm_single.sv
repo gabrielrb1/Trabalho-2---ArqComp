@@ -79,7 +79,7 @@ module testbench();
   logic        reset;
 
   logic [31:0] WriteData, DataAdr;
-  logic        MemWrite, Shift;
+  logic        MemWrite;
 
   // instantiate device to be tested
   top dut(clk, reset, WriteData, DataAdr, MemWrite);
@@ -188,7 +188,7 @@ module controller(input  logic         clk, reset,
   
   decoder dec(Instr[27:26], Instr[25:20], Instr[15:12],
               FlagW, PCS, RegW, MemW, NoWrite, Shift,
-              MemtoReg, ALUSrc, ImmSrc, RegSrc, ALUControl); //InserÁ„o do NoWrite no Decoder e no Conditional Logic, para fazer as conexıes
+              MemtoReg, ALUSrc, ImmSrc, RegSrc, ALUControl); //Inser√ß√£o do NoWrite no Decoder e no Conditional Logic, para fazer as conex√µes
   condlogic cl(clk, reset, Instr[31:28], ALUFlags,
                FlagW, PCS, RegW, MemW, NoWrite,
                PCSrc, RegWrite, MemWrite);
@@ -198,7 +198,7 @@ module decoder(input  logic [1:0] Op,
                input  logic [5:0] Funct,
                input  logic [3:0] Rd,
                output logic [1:0] FlagW,
-               output logic       PCS, RegW, MemW, NoWrite, Shift, //SaÌda do NoWrite no Decoder e Shift
+               output logic       PCS, RegW, MemW, NoWrite, Shift, //Sa√≠da do NoWrite no Decoder e Shift
                output logic       MemtoReg, ALUSrc,
                output logic [1:0] ImmSrc, RegSrc, ALUControl);
 
@@ -234,15 +234,15 @@ module decoder(input  logic [1:0] Op,
   	    4'b0010: ALUControl = 2'b01; // SUB
             4'b0000: ALUControl = 2'b10; // AND
   	    4'b1100: ALUControl = 2'b11; // ORR
-	    4'b1010: ALUControl = 2'b01; // CMP - funÁ„o CMP utiliza como base a funÁ„o SUB, porÈm sem escrever em registrador
-	    4'b1000: ALUControl = 2'b10; // TST - an·loga ‡ funÁ„o CMP, porÈm usa como base a funÁ„o AND
-	    4'b1101: ALUControl = 2'bxx;  // LSL - para n„o precisar acrescentar um bit a mais na ALU, usa-se a possibilidade restante 
+	    4'b1010: ALUControl = 2'b01; // CMP - fun√ß√£o CMP utiliza como base a fun√ß√£o SUB, por√©m sem escrever em registrador
+	    4'b1000: ALUControl = 2'b10; // TST - an√°loga √† fun√ß√£o CMP, por√©m usa como base a fun√ß√£o AND
+	    4'b1101: ALUControl = 2'bxx;  // LSL - para n√£o precisar acrescentar um bit a mais na ALU, usa-se a possibilidade restante 
   	    //default: ALUControl = 2'bx;  // unimplemented
       endcase
-if ((Funct[4:1] == 4'b1010)|(Funct[4:1] == 4'b1000)) NoWrite = 1; //CondiÁ„o de uso do NoWrite, para diferenciar da SUB e AND
+if ((Funct[4:1] == 4'b1010)|(Funct[4:1] == 4'b1000)) NoWrite = 1; //Condi√ß√£o de uso do NoWrite, para diferenciar da SUB e AND
 else NoWrite = 0;
 
-if (Funct[4:1] == 4'b1101) Shift = 1; // CondiÁ„o de entrada do Shift
+if (Funct[4:1] == 4'b1101) Shift = 1; // Condi√ß√£o de entrada do Shift
 else Shift = 0;
 
       // update flags if S bit is set 
@@ -279,7 +279,7 @@ module condlogic(input  logic       clk, reset,
   // write controls are conditional
   condcheck cc(Cond, Flags, CondEx);
   assign FlagWrite = FlagW & {2{CondEx}};
-  assign RegWrite  = (RegW  & CondEx) & ~NoWrite; //Conex„o lÛgica entre decoder e condlogic
+  assign RegWrite  = (RegW  & CondEx) & ~NoWrite; //Conex√£o l√≥gica entre decoder e condlogic
   assign MemWrite  = MemW  & CondEx;
   assign PCSrc     = PCS   & CondEx;
 endmodule    
@@ -345,7 +345,7 @@ module datapath(input  logic        clk, reset,
                  Instr[15:12], Result, PCPlus8, 
                  SrcA, WriteData); 
   mux2 #(32)  calcmux1(ALUResult, SrcB, Shift, ALUResult2); 
-  mux2 #(32)  resmux(ALUResult2, ReadData, MemtoReg, Result); //Acrescenta o resultado obtido pelo novo mux no ˙ltimo mux
+  mux2 #(32)  resmux(ALUResult2, ReadData, MemtoReg, Result); //Acrescenta o resultado obtido pelo novo mux no √∫ltimo mux
   extend      ext(Instr[23:0], ImmSrc, ExtImm);
 
   // ALU logic
