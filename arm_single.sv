@@ -186,8 +186,8 @@ module controller(input  logic         clk, reset,
   logic       PCS, RegW, MemW, NoWrite; //Cria o NoWrite no plano de controle
   
   decoder dec(Instr[27:26], Instr[25:20], Instr[15:12],
-              FlagW, PCS, RegW, MemW, NoWrite,
-              MemtoReg, ALUSrc, ImmSrc, RegSrc, ALUControl);
+              FlagW, PCS, RegW, MemW, NoWrite, Shift,
+              MemtoReg, ALUSrc, ImmSrc, RegSrc, ALUControl); //Inserção do NoWrite no Decoder e no Conditional Logic, para fazer as conexões
   condlogic cl(clk, reset, Instr[31:28], ALUFlags,
                FlagW, PCS, RegW, MemW, NoWrite,
                PCSrc, RegWrite, MemWrite);
@@ -197,7 +197,7 @@ module decoder(input  logic [1:0] Op,
                input  logic [5:0] Funct,
                input  logic [3:0] Rd,
                output logic [1:0] FlagW,
-               output logic       PCS, RegW, MemW, NoWrite,
+               output logic       PCS, RegW, MemW, NoWrite, Shift, //Saída do NoWrite no Decoder e Shift
                output logic       MemtoReg, ALUSrc,
                output logic [1:0] ImmSrc, RegSrc, ALUControl);
 
@@ -233,12 +233,16 @@ module decoder(input  logic [1:0] Op,
   	    4'b0010: ALUControl = 2'b01; // SUB
             4'b0000: ALUControl = 2'b10; // AND
   	    4'b1100: ALUControl = 2'b11; // ORR
-	    4'b1010: ALUControl = 2'b01; // CMP
-	    4'b1000: ALUControl = 2'b10; // TST
-  	    default: ALUControl = 2'bx;  // unimplemented
+	    4'b1010: ALUControl = 2'b01; // CMP - função CMP utiliza como base a função SUB, porém sem escrever em registrador
+	    4'b1000: ALUControl = 2'b10; // TST - análoga à função CMP, porém usa como base a função AND
+	    4'b1101: ALUControl = 2'bx;  // LSL - para não precisar acrescentar um bit a mais na ALU, usa-se a possibilidade restante 
+  	    //default: ALUControl = 2'bx;  // unimplemented
       endcase
-if ((Funct[4:1] == 4'b1010)|(Funct[4:1] == 4'b1000)) NoWrite = 1;
+if ((Funct[4:1] == 4'b1010)|(Funct[4:1] == 4'b1000)) NoWrite = 1; //Condição de uso do NoWrite, para diferenciar da SUB e AND
 else NoWrite = 0;
+
+if (Funct[4:1] == 4'b1101) Shift = 1; // Condição de entrada do Shift
+else Shift = 0;
 
       // update flags if S bit is set 
 	// (C & V only updated for arith instructions)
@@ -259,7 +263,7 @@ module condlogic(input  logic       clk, reset,
                  input  logic [3:0] Cond,
                  input  logic [3:0] ALUFlags,
                  input  logic [1:0] FlagW,
-                 input  logic       PCS, RegW, MemW, NoWrite,
+                 input  logic       PCS, RegW, MemW, NoWrite, //Entrada do NoWrite no Condlogic
                  output logic       PCSrc, RegWrite, MemWrite);
                  
   logic [1:0] FlagWrite;
@@ -274,7 +278,7 @@ module condlogic(input  logic       clk, reset,
   // write controls are conditional
   condcheck cc(Cond, Flags, CondEx);
   assign FlagWrite = FlagW & {2{CondEx}};
-  assign RegWrite  = (RegW  & CondEx) & ~NoWrite;
+  assign RegWrite  = (RegW  & CondEx) & ~NoWrite; //Conexão lógica entre decoder e condlogic
   assign MemWrite  = MemW  & CondEx;
   assign PCSrc     = PCS   & CondEx;
 endmodule    
@@ -316,7 +320,7 @@ module datapath(input  logic        clk, reset,
                 input  logic        ALUSrc,
                 input  logic [1:0]  ALUControl,
                 input  logic        MemtoReg,
-                input  logic        PCSrc,
+                input  logic        PCSrc, Shift,
                 output logic [3:0]  ALUFlags,
                 output logic [31:0] PC,
                 input  logic [31:0] Instr,
@@ -339,13 +343,19 @@ module datapath(input  logic        clk, reset,
   regfile     rf(clk, RegWrite, RA1, RA2,
                  Instr[15:12], Result, PCPlus8, 
                  SrcA, WriteData); 
-  mux2 #(32)  resmux(ALUResult, ReadData, MemtoReg, Result);
+  mux2 #(32)  resmux(ALUResult2, ReadData, MemtoReg, Result); //Acrescenta o resultado obtido pelo novo mux no último mux
   extend      ext(Instr[23:0], ImmSrc, ExtImm);
 
   // ALU logic
-  mux2 #(32)  srcbmux(WriteData, ExtImm, ALUSrc, SrcB);
+
+  mux2 #(32)  srcbmux(Shift, ExtImm, ALUSrc, SrcB); //Altera a entradad do mux para Shift
   alu         alu(SrcA, SrcB, ALUControl, 
                   ALUResult, ALUFlags);
+  mux2 #(32) resultmux2 (ALUResult, SrcB, Shift, ALUResult2); //Acrescenta um novo mux
+
+	if ((Funct[6:5] == 2'b00) & Shift == 1) //Verifica se o shift está ativado e se é do tipo LSL
+		
+
 endmodule
 
 module regfile(input  logic        clk, 
