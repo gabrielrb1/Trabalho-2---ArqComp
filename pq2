@@ -1,0 +1,21 @@
+		and		r4, r4, #0
+		add		r4, r4, #2147483648 ;valor de estouro da pg
+		and		r5, r5, #0
+		add		r5, r5, #10 ;número máximo de iterações
+		and		r6, r6, #0 ;contador de iterações
+		and		r7, r7, #0
+		add		r7, r7, #16 ;valor inicial
+		and		r11, r11, #0
+		add		r11, r11, #0x1000 ;referência para memória
+		and		r12, r12, #0 ;incrementos para memória
+		cmp		r5,r6 ;verifica se o número de iterações foi atingido
+		addeq	PC,PC, #24 ;se o critério anterior for atendido, a pg finda
+		tst		r7, r4 ;verifica se o código
+		addne	PC,PC, #16 ;
+		lsl		r7,r7,#1 ;multiplica por dois, que é o fator de crescimento da pg
+		add		r6, r6, #1 ;incrementa o contador de iterações
+		str		r7, [r11, r12] ;armazena o item calculado na memória
+		add		r12, r12, #4 ;aponta a referência para o próximo endereço
+		sub		PC,PC,#32 ;
+		add		r1,r12, #0x1000
+		sub		r1,r1,#4
