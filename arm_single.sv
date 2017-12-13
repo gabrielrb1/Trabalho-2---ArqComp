@@ -87,7 +87,7 @@ module testbench();
   // initialize test
   initial
     begin
-      reset <= 1; # 22; reset <= 0;
+      reset <= 1; # 11; reset <= 0;
     end
 
   // generate clock to sequence tests
@@ -100,12 +100,12 @@ module testbench();
   always @(negedge clk)
     begin
       if(MemWrite) begin
-        if(DataAdr === 100 & WriteData === 7) begin
+        if(DataAdr === 2040 & WriteData === 4096) begin
           $display("Simulation succeeded");
           $stop;
-        end else if (DataAdr !== 96) begin
-          $display("Simulation failed");
-          $stop;
+//        end else if (DataAdr !== 96) begin
+//          $display("Simulation failed");
+//          $stop;
         end
       end
     end
@@ -155,18 +155,18 @@ module arm(input  logic        clk, reset,
            input  logic [31:0] ReadData);
 
   logic [3:0] ALUFlags;
-  logic       RegWrite, 
+  logic       RegWrite, Shift,
               ALUSrc, MemtoReg, PCSrc;
   logic [1:0] RegSrc, ImmSrc, ALUControl;
 
   controller c(clk, reset, Instr[31:12], ALUFlags, 
                RegSrc, RegWrite, ImmSrc, 
-               ALUSrc, ALUControl,
-               MemWrite, MemtoReg, PCSrc, Shift);
+               ALUSrc, Shift, ALUControl,
+               MemWrite, MemtoReg, PCSrc);
   datapath dp(clk, reset, 
               RegSrc, RegWrite, ImmSrc,
-              ALUSrc, ALUControl,
-              MemtoReg, PCSrc, Shift,
+              ALUSrc, ALUControl, Shift,
+              MemtoReg, PCSrc,
               ALUFlags, PC, Instr,
               ALUResult, WriteData, ReadData);
 endmodule
@@ -177,18 +177,17 @@ module controller(input  logic         clk, reset,
                   output logic [1:0]   RegSrc,
                   output logic         RegWrite,
                   output logic [1:0]   ImmSrc,
-                  output logic         ALUSrc, 
+                  output logic         ALUSrc, Shift, 
                   output logic [1:0]   ALUControl,
                   output logic         MemWrite, MemtoReg,
-                  output logic         PCSrc,
-		  output logic         Shift);
+                  output logic         PCSrc);
 
   logic [1:0] FlagW;
   logic       PCS, RegW, MemW, NoWrite; //Cria o NoWrite no plano de controle
   
   decoder dec(Instr[27:26], Instr[25:20], Instr[15:12],
               FlagW, PCS, RegW, MemW, NoWrite, Shift,
-              MemtoReg, ALUSrc, ImmSrc, RegSrc, ALUControl); //Inserção do NoWrite no Decoder e no Conditional Logic, para fazer as conexões
+              MemtoReg, ALUSrc, ImmSrc, RegSrc, ALUControl); //Insercao do NoWrite no Decoder e no Conditional Logic e Shift no Decoder, para fazer as conexoes
   condlogic cl(clk, reset, Instr[31:28], ALUFlags,
                FlagW, PCS, RegW, MemW, NoWrite,
                PCSrc, RegWrite, MemWrite);
@@ -198,7 +197,7 @@ module decoder(input  logic [1:0] Op,
                input  logic [5:0] Funct,
                input  logic [3:0] Rd,
                output logic [1:0] FlagW,
-               output logic       PCS, RegW, MemW, NoWrite, Shift, //Saída do NoWrite no Decoder e Shift
+               output logic       PCS, RegW, MemW, NoWrite, Shift, //Saida do NoWrite e Shift no Decoder
                output logic       MemtoReg, ALUSrc,
                output logic [1:0] ImmSrc, RegSrc, ALUControl);
 
@@ -237,12 +236,12 @@ module decoder(input  logic [1:0] Op,
 	    4'b1010: ALUControl = 2'b01; // CMP - função CMP utiliza como base a função SUB, porém sem escrever em registrador
 	    4'b1000: ALUControl = 2'b10; // TST - análoga à função CMP, porém usa como base a função AND
 	    4'b1101: ALUControl = 2'bxx;  // LSL - para não precisar acrescentar um bit a mais na ALU, usa-se a possibilidade restante 
-  	    //default: ALUControl = 2'bx;  // unimplemented
+  	    default: ALUControl = 2'bxx;  // unimplemented
       endcase
-if ((Funct[4:1] == 4'b1010)|(Funct[4:1] == 4'b1000)) NoWrite = 1; //Condição de uso do NoWrite, para diferenciar da SUB e AND
+if ((Funct[4:1] == 4'b1010)|(Funct[4:1] == 4'b1000)) NoWrite = 1; //Condicao de uso do NoWrite, para diferenciar da SUB e AND
 else NoWrite = 0;
 
-if (Funct[4:1] == 4'b1101) Shift = 1; // Condição de entrada do Shift
+if (Funct[4:1] == 4'b1101) Shift = 1; // Condicao de ativacao do Shift
 else Shift = 0;
 
       // update flags if S bit is set 
@@ -253,7 +252,7 @@ else Shift = 0;
         (ALUControl == 2'b00 | ALUControl == 2'b01); 
     end else begin
       ALUControl = 2'b00; // add for non-DP instructions
-      FlagW      = 2'b00; // don't update Flags
+      FlagW      = 2'b00; // 
     end
               
   // PC Logic
@@ -279,7 +278,7 @@ module condlogic(input  logic       clk, reset,
   // write controls are conditional
   condcheck cc(Cond, Flags, CondEx);
   assign FlagWrite = FlagW & {2{CondEx}};
-  assign RegWrite  = (RegW  & CondEx) & ~NoWrite; //Conexão lógica entre decoder e condlogic
+  assign RegWrite  = (RegW  & CondEx) & ~NoWrite; //Conexao logica entre decoder e condlogic
   assign MemWrite  = MemW  & CondEx;
   assign PCSrc     = PCS   & CondEx;
 endmodule    
@@ -320,8 +319,8 @@ module datapath(input  logic        clk, reset,
                 input  logic [1:0]  ImmSrc,
                 input  logic        ALUSrc,
                 input  logic [1:0]  ALUControl,
-                input  logic        MemtoReg,
-                input  logic        PCSrc, Shift,
+                input  logic        Shift, MemtoReg, //Entrada do Shift vindo do decoder no datapath
+                input  logic        PCSrc,
                 output logic [3:0]  ALUFlags,
                 output logic [31:0] PC,
                 input  logic [31:0] Instr,
@@ -344,15 +343,14 @@ module datapath(input  logic        clk, reset,
   regfile     rf(clk, RegWrite, RA1, RA2,
                  Instr[15:12], Result, PCPlus8, 
                  SrcA, WriteData); 
-  mux2 #(32)  calcmux1(ALUResult, SrcB, Shift, ALUResult2); 
-  mux2 #(32)  resmux(ALUResult2, ReadData, MemtoReg, Result); //Acrescenta o resultado obtido pelo novo mux no último mux
+  mux2 #(32)  muxtodata(ALUResult, SrcB, Shift, ALUResult2); 
+  mux2 #(32)  muxtoalu(ALUResult2, ReadData, MemtoReg, Result); //Mux criado antes do Data Memory para fazer a selecao do dado que vem da ALU
   extend      ext(Instr[23:0], ImmSrc, ExtImm);
 
   // ALU logic
-  mux2 #(32)  calcmux2(WriteData, WriteData << Instr[11:7], Shift, WriteData2); //Altera a entradad do mux para Shift
-  mux2 #(32)  srcbmux(WriteData2, ExtImm, ALUSrc, SrcB); //Altera a entradad do mux para Shift
-  alu         alu(SrcA, SrcB, ALUControl, 
-                  ALUResult, ALUFlags);
+  mux2 #(32)  calcmux2(WriteData, WriteData << Instr[11:7], Shift, WriteData2); //Mux auxiliar criado para fazer o calculo do shift
+  mux2 #(32)  srcbmux(WriteData2, ExtImm, ALUSrc, SrcB); //Mux anterior � ALU alterado para receber o resultado do Shift
+  alu         alu(SrcA, SrcB, ALUControl, ALUResult, ALUFlags);
 
 
 	
